@@ -1,2 +1,6 @@
 out/
 /cache
+node_modules
+.env
+artifacts
+types

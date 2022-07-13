@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.6;
+pragma solidity ^0.8.9;
 
-library Blake3Sol {
-    //type State is uint32[16];
+contract Blake3SolTest {
+    uint8 public changeMe = 0;
+
+    event TestEvent(bytes data);
+      //type State is uint32[16];
     //type usize is uint32;
     uint256 constant BLOCK_LEN = 64;
-    //uint32 constant OUT_LEN = 32;
+    uint32 constant OUT_LEN = 32;
     uint32 constant CHUNK_LEN = 1024;
 
     // Flag constants
@@ -45,7 +48,97 @@ library Blake3Sol {
         uint32 flags;
     }
 
-    // This should remain constant but solidity doesn't support declaring it
+    function test_hash(bytes memory input, uint8 changed) public returns (bytes memory) {
+        changeMe = changed;
+        Hasher memory hasher = new_hasher();
+
+        hasher = update_hasher(hasher, input);
+        bytes memory output = finalize(hasher);
+
+        emit TestEvent(output);
+
+        return output;
+    }
+
+    function test_keyed_hash(bytes memory fisrtInput, bytes memory secondInput, uint8 changed) public returns (bytes memory) {
+        changeMe = changed;
+
+        Hasher memory hasher  = new_keyed(fisrtInput);
+
+        hasher = update_hasher(hasher, secondInput);
+        bytes memory output = finalize(hasher);
+
+        emit TestEvent(output);
+
+        return output;
+
+        // assertEq(
+        //     bytes32(output),
+        //     0x0edd7e645d2bc1bba1f323f6339a3d0448ec6b675991e8dc76d2396eb0dffca2
+        // );
+    }
+
+    function test_keyed_hash_10_times(bytes memory fisrtInput, bytes memory secondInput, uint8 changed) public returns (bytes memory) {
+        changeMe = changed;
+
+        Hasher memory hasher = new_keyed(fisrtInput);
+        bytes memory output;
+
+        for (uint256 i = 0; i < 10; ++i) {
+            hasher = update_hasher(hasher, secondInput);
+            output = finalize(hasher);
+        }
+
+        emit TestEvent(output);
+
+        return output;
+    }
+
+    function test_keyed_hash_60_times(bytes memory fisrtInput, bytes memory secondInput, uint8 changed) public returns (bytes memory) {
+        changeMe = changed;
+
+        Hasher memory hasher  = new_keyed(fisrtInput);
+        bytes memory output;
+
+        for (uint256 i = 0; i < 60; ++i) {
+            hasher = update_hasher(hasher, secondInput);
+            output = finalize(hasher);
+        }
+
+        emit TestEvent(output);
+
+        return output;
+    }
+
+    /**
+    * This test works by levaraging the FFI provided by Foundry tools, but it also requires the
+    * bridge-differential-tests project to exist in the same folder as Blake3Sol and it must
+    * be compiled using `cargo build` before running the Solidity test. This test currently passes
+    * hashing ~50kb of data.
+    *
+    function test_big_hash_ffi() public {
+        string[] memory cmds = new string[](2);
+        cmds[0] = '../bridge-differential-tests/target/debug/bridge_differential_tests';
+        cmds[1] = '--big-hash';
+
+        bytes memory packedData = vm.ffi(cmds);
+        (bytes memory data, bytes32 dataHash) = abi.decode(packedData, (bytes, bytes32));
+
+        Blake3Sol.Hasher memory hasher = Blake3Sol.new_keyed(
+            abi.encodePacked(
+                bytes32(0xc811f2ef6eb6bd09fb973c747cbf349e682393ca4d8df88e5f0bcd564c10a84b)
+            )
+        );
+        hasher = hasher.update_hasher(data);
+        bytes memory bigHash = hasher.finalize();
+
+        assertEq(bytes32(bigHash), dataHash);
+    }
+    */
+
+    // INTERNAL FUNCTIONS
+
+      // This should remain constant but solidity doesn't support declaring it
     // uint8[16] MSG_PERMUTATION = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9, 14, 15, 8];
     // uint32[8] IV = [
     //     0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19
@@ -234,7 +327,7 @@ library Blake3Sol {
     }
 
 
-    function _le_bytes_get_uint32(bytes memory _bytes, uint256 _start) internal pure returns (uint32) {
+    function _le_bytes_get_uint32(bytes memory _bytes, uint256 _start) public pure returns (uint32) {
         require(_bytes.length >= _start + 4, "le_bytes_get_uint32_outOfBounds");
         uint32 tempUint;
 
@@ -456,13 +549,13 @@ library Blake3Sol {
     }
 
     /// Construct a new `Hasher` for the regular hash function.
-    function new_hasher() external pure returns (Hasher memory) {
+    function new_hasher() public pure returns (Hasher memory) {
         uint32[8] memory IV = _IV();
         return _new_hasher_internal(IV, 0);
     }
 
     /// Construct a new `Hasher` for the keyed hash function.
-    function new_keyed(bytes calldata key) external pure returns (Hasher memory) {
+    function new_keyed(bytes memory key) public pure returns (Hasher memory) {
         uint32[8] memory key_words;
         bytes memory key_mem = key;
         _words_from_little_endian_bytes8(key_mem, key_words);
@@ -471,7 +564,7 @@ library Blake3Sol {
 
     // Construct a new `Hasher` for the key derivation function. The context
     // string should be hardcoded, globally unique, and application-specific
-    function new_derive_key(bytes calldata context) external pure returns (Hasher memory) {
+    function new_derive_key(bytes memory context) public pure returns (Hasher memory) {
         uint32[8] memory IV = _IV();
         Hasher memory context_hasher = _new_hasher_internal(IV, DERIVE_KEY_CONTEXT);
         update_hasher(context_hasher, context);
@@ -555,7 +648,7 @@ library Blake3Sol {
         return self;
     }
 
-    function finalize(Hasher calldata self) external pure returns (bytes memory) {
+    function finalize(Hasher memory self) public pure returns (bytes memory) {
         bytes memory output = new bytes(32);
 
         _finalize_internal(self, output);

@@ -1,53 +1,34 @@
 # Blake3 For Solidity
 
-This is an implementation of the blake3 hash function in solidity.
+This is an implementation of the blake3 hash function in solidity with hardhat test coverage and deployment.
 
+## Setup
+```
+$ cp .env.example .env
+```
+Add at least your private keys to the `.env` file and the coinmarketcap API key.
 
 
 ## Building
-You will need to pull down the library dependencies. Run:
-
 ```
-git submodule update --init --recursive
-```
-
-We use the [foundry tools](https://github.com/gakonst/foundry) for building and testing.
-
-Static builds of the `forge` and `cast` tools can be found [here](https://github.com/themeliolabs/artifacts).
-
-If you would prefer to install them via `cargo`, run:
-
-```
-$ cargo install --git https://github.com/gakonst/foundry --bin forge --locked
-$ cargo install --git https://github.com/gakonst/foundry --bin cast --locked
+$ npm install
+$ npx hardhat compile
 ```
 
-
-
-
-To build, run:
+## Testing
 ```
-$ forge build
+$ npx hardhat test
 ```
 
 
 ## Debugging
-
-
-To log with `ds-test`, add this line to the top of your solidity file:
+Start the local node:
 ```
-import "forge-std/Test.sol";
+$ npx hardhat node
 ```
 
-Then you can print out debugging information like this:
+Connect the hardhat console:
 ```
-emit log("Other example print");
+$ npx hardhat console --network localhost
 ```
-
-
-## Testing
-
-Run:
-```
-$ env RUST_LOG=forge=trace forge test -vvv
-```
+Now you can use the console to interact with the contract (with ethers.js preloaded).
